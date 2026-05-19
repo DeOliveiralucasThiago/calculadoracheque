@@ -7,35 +7,8 @@ from decimal import Decimal
 from fpdf import FPDF
 
 # Configuração da página
-st.set_page_config(page_title="Calculadora Stefanon & Nogueira", layout="wide")
-
-# --- AJUSTE ESTÉTICO (CSS INJETADO) ---
-st.markdown("""
-    <style>
-    /* Força o botão principal a ser Azul Profissional */
-    button[kind="primary"] {
-        background-color: #004080 !important;
-        border-color: #004080 !important;
-        color: white !important;
-    }
-    /* Efeito ao passar o mouse no botão principal */
-    button[kind="primary"]:hover {
-        background-color: #00264d !important;
-        border-color: #00264d !important;
-    }
-    /* Muda a cor da borda dos botões secundários ao passar o mouse */
-    button[kind="secondary"]:hover {
-        border-color: #004080 !important;
-        color: #004080 !important;
-    }
-    /* Deixa o fundo da tela levemente mais elegante (opcional) */
-    .stApp {
-        background-color: #f8f9fa;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-st.title("Calculadora de Cheque Especial")
+st.set_page_config(page_title="Auditoria de Cheque Especial", layout="wide")
+st.title("Sistema Pericial: Cálculo de Cheque Especial")
 
 # --- CONTROLE DE MEMÓRIA (SESSION STATE) ---
 if 'reset_contador' not in st.session_state:
@@ -81,28 +54,30 @@ def gerar_pdf(resumo_dados, df_detalhado, indice_nome, juros_tipo, taxa):
     pdf.add_page()
     pdf.set_font("Arial", size=12)
     
-    # Cabeçalho do Laudo
     pdf.set_font("Arial", style="B", size=16)
-    # Título em Azul também no PDF!
     pdf.set_text_color(0, 64, 128) 
     pdf.cell(0, 10, "RELATÓRIO PERICIAL DE REVISÃO FINANCEIRA", ln=True, align="C")
-    pdf.set_text_color(0, 0, 0) # Volta pro preto
+    pdf.set_text_color(0, 0, 0) 
     
     pdf.set_font("Arial", style="I", size=10)
     pdf.cell(0, 10, f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", ln=True, align="C")
     pdf.ln(10)
     
-    # Seção: Parâmetros do Contrato
     pdf.set_font("Arial", style="B", size=12)
     pdf.cell(0, 8, "1. PARÂMETROS DO CONTRATO E ATUALIZAÇÃO", ln=True)
     pdf.set_font("Arial", size=11)
-    pdf.cell(0, 6, f"Índice de Correção Monetária: {indice_nome} (SGS/Banco Central)", ln=True)
+    
+    # Ajusta o texto do PDF caso seja "Sem Atualização"
+    if indice_nome == "Sem Atualização (Apenas Juros)":
+        pdf.cell(0, 6, "Índice de Correção Monetária: Não Aplicado (Apenas Juros)", ln=True)
+    else:
+        pdf.cell(0, 6, f"Índice de Correção Monetária: {indice_nome} (SGS/Banco Central)", ln=True)
+        
     pdf.cell(0, 6, f"Método de Capitalização dos Juros: Juros {juros_tipo}", ln=True)
     pdf.cell(0, 6, f"Taxa de Juros Contratada: {taxa:.3f}% ao mês", ln=True)
     pdf.cell(0, 6, f"Período de Auditoria: {resumo_dados['Dias']} dias", ln=True)
     pdf.ln(8)
     
-    # Seção: Resumo Financeiro
     pdf.set_font("Arial", style="B", size=12)
     pdf.cell(0, 8, "2. RESUMO DOS VALORES APURADOS", ln=True)
     pdf.set_font("Arial", size=11)
@@ -112,12 +87,10 @@ def gerar_pdf(resumo_dados, df_detalhado, indice_nome, juros_tipo, taxa):
     pdf.cell(0, 6, f"VALOR TOTAL RECALCULADO DA DÍVIDA: R$ {resumo_dados['Final']:.2f}", ln=True)
     pdf.ln(10)
     
-    # Seção: Tabela de Memória Diária
     pdf.set_font("Arial", style="B", size=12)
     pdf.cell(0, 8, "3. EXTRATO DA MEMÓRIA DE CÁLCULO DIÁRIA", ln=True)
     pdf.ln(2)
     
-    # Cabeçalho da Tabela no PDF
     pdf.set_font("Arial", style="B", size=9)
     pdf.set_fill_color(240, 240, 240)
     pdf.cell(25, 6, "Data", border=1, align="C", fill=True)
@@ -128,7 +101,6 @@ def gerar_pdf(resumo_dados, df_detalhado, indice_nome, juros_tipo, taxa):
     pdf.cell(35, 6, "S. Final Dia", border=1, align="R", fill=True)
     pdf.ln()
     
-    # Linhas da Tabela
     pdf.set_font("Arial", size=8)
     for _, row in df_detalhado.iterrows():
         pdf.cell(25, 5, str(row["Data"]), border=1, align="C")
@@ -153,21 +125,31 @@ with st.sidebar:
     
     st.markdown("---")
     st.header("Regras do Contrato")
-    indice_escolhido = st.selectbox("Índice de Atualização", list(CODIGOS_BCB.keys()))
+    
+    # NOVA OPÇÃO INCLUÍDA AQUI
+    opcoes_indices = ["Sem Atualização (Apenas Juros)"] + list(CODIGOS_BCB.keys())
+    indice_escolhido = st.selectbox("Índice de Atualização", opcoes_indices)
+    
     tipo_juros = st.radio("Método de Juros", ["Compostos", "Simples"])
     taxa_juros = st.number_input("Taxa de Juros a.m. (%)", value=8.000, format="%.3f")
 
     st.markdown("---")
-    st.header(f"Tabela Oficial - {indice_escolhido}")
-    codigo_atual = CODIGOS_BCB[indice_escolhido]
-    df_historico_completo = buscar_indice_bcb(codigo_atual)
     
-    ano_inicio = str(data_inicial.year)
-    if not df_historico_completo.empty:
-        df_filtrado = df_historico_completo[df_historico_completo['Mês/Ano'] >= f"{ano_inicio}-01"].copy()
+    # LÓGICA VISUAL: Esconde a tabela se escolher Sem Atualização
+    if indice_escolhido == "Sem Atualização (Apenas Juros)":
+        st.info("ℹ️ O recálculo será feito aplicando apenas a Taxa de Juros informada, sem correção monetária sobre o saldo diário.")
+        df_indices = pd.DataFrame(columns=["Mês/Ano", "Índice (%)"]) # Cria tabela vazia oculta para o motor não travar
     else:
-        df_filtrado = pd.DataFrame(columns=["Mês/Ano", "Índice (%)"])
-    df_indices = st.data_editor(df_filtrado, num_rows="dynamic", hide_index=True)
+        st.header(f"Tabela Oficial - {indice_escolhido}")
+        codigo_atual = CODIGOS_BCB[indice_escolhido]
+        df_historico_completo = buscar_indice_bcb(codigo_atual)
+        
+        ano_inicio = str(data_inicial.year)
+        if not df_historico_completo.empty:
+            df_filtrado = df_historico_completo[df_historico_completo['Mês/Ano'] >= f"{ano_inicio}-01"].copy()
+        else:
+            df_filtrado = pd.DataFrame(columns=["Mês/Ano", "Índice (%)"])
+        df_indices = st.data_editor(df_filtrado, num_rows="dynamic", hide_index=True)
 
 st.subheader("Livro de Lançamentos Diários (Entradas e Saídas)")
 st.write("Insira os valores correspondentes a cada dia.")
@@ -205,7 +187,6 @@ with col_btn2:
 
 # --- EXECUÇÃO DO CÁLCULO ---
 if btn_processar:
-    
     dic_indices = {row["Mês/Ano"]: Decimal(str(row["Índice (%)"] / 100)) for _, row in df_indices.iterrows()}
     dic_lancamentos = {}
     for _, row in df_lancamentos.iterrows():
@@ -221,6 +202,9 @@ if btn_processar:
     memoria_calculo = []
     saldo_atual = Decimal(str(saldo_inicial))
     data_atual = data_inicial
+    
+    # Ajusta o nome da coluna no relatório dinamicamente
+    col_taxa_nome = "Taxa de Atualização (%)" if indice_escolhido == "Sem Atualização (Apenas Juros)" else f"Taxa {indice_escolhido} (%)"
     
     while data_atual <= data_final:
         str_data = data_atual.strftime("%Y-%m-%d")
@@ -244,7 +228,7 @@ if btn_processar:
         memoria_calculo.append({
             "Data": data_atual.strftime("%d/%m/%Y"),
             "Saldo Anterior": float(saldo_inicio_dia),
-            f"Taxa {indice_escolhido} (%)": float(percentual_aplicado * 100),
+            col_taxa_nome: float(percentual_aplicado * 100),
             "Correção (R$)": float(valor_correcao),
             "Débitos (R$)": float(debitos),
             "Créditos (R$)": float(creditos),
@@ -292,7 +276,7 @@ if btn_processar:
         st.download_button(
             label="📊 Baixar Planilha Auditável (Excel)",
             data=dados_excel,
-            file_name=f"Revisao_Divida_{indice_escolhido}.xlsx",
+            file_name=f"Revisao_Divida.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
         )
@@ -312,7 +296,7 @@ if btn_processar:
     st.dataframe(
         df_memoria.style.format({
             "Saldo Anterior": "R$ {:.2f}",
-            f"Taxa {indice_escolhido} (%)": "{:.2f}%",
+            col_taxa_nome: "{:.2f}%",
             "Correção (R$)": "R$ {:.2f}",
             "Débitos (R$)": "R$ {:.2f}",
             "Créditos (R$)": "R$ {:.2f}",
