@@ -8,6 +8,61 @@ from fpdf import FPDF
 
 # Configuração da página
 st.set_page_config(page_title="Auditoria de Cheque Especial", layout="wide")
+
+# --- AJUSTE ESTÉTICO TOTALMENTE BLINDADO (CSS INJETADO) ---
+st.markdown("""
+    <style>
+    /* 1. Força o botão principal a ser Azul Profissional */
+    button[kind="primary"] {
+        background-color: #004080 !important;
+        border-color: #004080 !important;
+        color: white !important;
+    }
+    button[kind="primary"]:hover {
+        background-color: #00264d !important;
+        border-color: #00264d !important;
+    }
+    
+    /* Muda a cor da borda dos botões secundários ao passar o mouse */
+    button[kind="secondary"]:hover {
+        border-color: #004080 !important;
+        color: #004080 !important;
+    }
+    
+    /* Fundo da tela */
+    .stApp {
+        background-color: #f8f9fa;
+    }
+
+    /* 2. CORREÇÃO DOS CAMPOS DE TEXTO/DATA/NÚMERO (Removendo o contorno vermelho) */
+    div[data-baseweb="input"] > div:focus-within,
+    div[data-baseweb="select"] > div:focus-within {
+        border-color: #004080 !important;
+        box-shadow: 0 0 0 1px #004080 !important;
+    }
+    div[data-baseweb="input"]:hover, 
+    div[data-baseweb="select"]:hover {
+        border-color: #004080 !important;
+    }
+
+    /* 3. CORREÇÃO DA BOLINHA DE SELEÇÃO (Radio Buttons - Simples/Compostos) */
+    /* Muda a cor da bolinha quando selecionada */
+    div[data-testid="stRadio"] div[data-baseweb="radio"] input:checked + div {
+        background-color: #004080 !important;
+        border-color: #004080 !important;
+    }
+    /* Muda a borda da bolinha ao passar o mouse */
+    div[data-testid="stRadio"] div[data-baseweb="radio"]:hover div {
+        border-color: #004080 !important;
+    }
+    
+    /* 4. Ajustes finos de links e elementos ativos */
+    a {
+        color: #004080 !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("Sistema Pericial: Cálculo de Cheque Especial")
 
 # --- CONTROLE DE MEMÓRIA (SESSION STATE) ---
@@ -54,6 +109,7 @@ def gerar_pdf(resumo_dados, df_detalhado, indice_nome, juros_tipo, taxa):
     pdf.add_page()
     pdf.set_font("Arial", size=12)
     
+    # Cabeçalho do Laudo
     pdf.set_font("Arial", style="B", size=16)
     pdf.set_text_color(0, 64, 128) 
     pdf.cell(0, 10, "RELATÓRIO PERICIAL DE REVISÃO FINANCEIRA", ln=True, align="C")
@@ -63,11 +119,11 @@ def gerar_pdf(resumo_dados, df_detalhado, indice_nome, juros_tipo, taxa):
     pdf.cell(0, 10, f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", ln=True, align="C")
     pdf.ln(10)
     
+    # Seção: Parâmetros do Contrato
     pdf.set_font("Arial", style="B", size=12)
     pdf.cell(0, 8, "1. PARÂMETROS DO CONTRATO E ATUALIZAÇÃO", ln=True)
     pdf.set_font("Arial", size=11)
     
-    # Ajusta o texto do PDF caso seja "Sem Atualização"
     if indice_nome == "Sem Atualização (Apenas Juros)":
         pdf.cell(0, 6, "Índice de Correção Monetária: Não Aplicado (Apenas Juros)", ln=True)
     else:
@@ -78,6 +134,7 @@ def gerar_pdf(resumo_dados, df_detalhado, indice_nome, juros_tipo, taxa):
     pdf.cell(0, 6, f"Período de Auditoria: {resumo_dados['Dias']} dias", ln=True)
     pdf.ln(8)
     
+    # Seção: Resumo Financeiro
     pdf.set_font("Arial", style="B", size=12)
     pdf.cell(0, 8, "2. RESUMO DOS VALORES APURADOS", ln=True)
     pdf.set_font("Arial", size=11)
@@ -87,10 +144,12 @@ def gerar_pdf(resumo_dados, df_detalhado, indice_nome, juros_tipo, taxa):
     pdf.cell(0, 6, f"VALOR TOTAL RECALCULADO DA DÍVIDA: R$ {resumo_dados['Final']:.2f}", ln=True)
     pdf.ln(10)
     
+    # Seção: Tabela de Memória Diária
     pdf.set_font("Arial", style="B", size=12)
     pdf.cell(0, 8, "3. EXTRATO DA MEMÓRIA DE CÁLCULO DIÁRIA", ln=True)
     pdf.ln(2)
     
+    # Cabeçalho da Tabela no PDF
     pdf.set_font("Arial", style="B", size=9)
     pdf.set_fill_color(240, 240, 240)
     pdf.cell(25, 6, "Data", border=1, align="C", fill=True)
@@ -101,6 +160,7 @@ def gerar_pdf(resumo_dados, df_detalhado, indice_nome, juros_tipo, taxa):
     pdf.cell(35, 6, "S. Final Dia", border=1, align="R", fill=True)
     pdf.ln()
     
+    # Linhas da Tabela
     pdf.set_font("Arial", size=8)
     for _, row in df_detalhado.iterrows():
         pdf.cell(25, 5, str(row["Data"]), border=1, align="C")
@@ -126,7 +186,7 @@ with st.sidebar:
     st.markdown("---")
     st.header("Regras do Contrato")
     
-    # NOVA OPÇÃO INCLUÍDA AQUI
+    # Lista com a opção sem atualização inclusa
     opcoes_indices = ["Sem Atualização (Apenas Juros)"] + list(CODIGOS_BCB.keys())
     indice_escolhido = st.selectbox("Índice de Atualização", opcoes_indices)
     
@@ -135,10 +195,10 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # LÓGICA VISUAL: Esconde a tabela se escolher Sem Atualização
+    # Controle visual do painel do Banco Central
     if indice_escolhido == "Sem Atualização (Apenas Juros)":
         st.info("ℹ️ O recálculo será feito aplicando apenas a Taxa de Juros informada, sem correção monetária sobre o saldo diário.")
-        df_indices = pd.DataFrame(columns=["Mês/Ano", "Índice (%)"]) # Cria tabela vazia oculta para o motor não travar
+        df_indices = pd.DataFrame(columns=["Mês/Ano", "Índice (%)"])
     else:
         st.header(f"Tabela Oficial - {indice_escolhido}")
         codigo_atual = CODIGOS_BCB[indice_escolhido]
@@ -203,7 +263,6 @@ if btn_processar:
     saldo_atual = Decimal(str(saldo_inicial))
     data_atual = data_inicial
     
-    # Ajusta o nome da coluna no relatório dinamicamente
     col_taxa_nome = "Taxa de Atualização (%)" if indice_escolhido == "Sem Atualização (Apenas Juros)" else f"Taxa {indice_escolhido} (%)"
     
     while data_atual <= data_final:
