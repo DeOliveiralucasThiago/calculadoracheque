@@ -7,7 +7,7 @@ from decimal import Decimal
 from fpdf import FPDF
 
 # Configuração da página
-st.set_page_config(page_title="Auditoria de Cheque Especial", layout="wide")
+st.set_page_config(page_title="Calculadora Stefanon & Nogueira", layout="wide")
 
 # --- AJUSTE ESTÉTICO TOTALMENTE BLINDADO (CSS INJETADO) ---
 st.markdown("""
@@ -50,7 +50,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("Sistema Pericial: Cálculo de Cheque Especial")
+st.title("Cálculo de Cheque Especial")
 
 # --- CONTROLE DE MEMÓRIA (SESSION STATE) ---
 if 'reset_contador' not in st.session_state:
