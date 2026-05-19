@@ -197,7 +197,7 @@ with st.sidebar:
 # --- ÁREA PRINCIPAL ---
 # Regra: Se o usuário ainda não escolheu as duas datas, mostra um aviso amigável e esconde a tabela.
 if not data_inicial or not data_final:
-    st.info("👈 **Bem-vindo ao Sistema Pericial.** Para iniciar a auditoria, por favor, defina a **Data Inicial** e a **Data Final** no menu lateral.")
+    st.info("👈 **Bem-vindo a Calculadora de Cheque Especial.** Para iniciar o cálculo, por favor, defina a **Data Inicial** e a **Data Final** no menu lateral.")
 
 elif data_inicial > data_final:
     st.error("⚠️ **Atenção:** A Data Inicial não pode ser posterior à Data Final.")
